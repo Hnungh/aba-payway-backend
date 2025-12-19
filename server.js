@@ -1,150 +1,109 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const crypto = require('crypto'); // หัวใจสำคัญสำหรับ RSA
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// --- CONFIGURATION (ใส่ข้อมูลของคุณที่นี่) ---
-const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
-const CHAT_ID = '7299129094';
-
-app.post('/create-order', async (req, res) => {
-    const order = req.body;
-    
-    // 1. สร้างข้อความสำหรับแจ้งเตือนใน Telegram
-    const message = `
-🛍️ **ออเดอร์ใหม่เข้าแล้ว!**
---------------------------
-🆔 Order ID: ${order.order_id || 'N/A'}
-👤 ลูกค้า: ${order.customer.firstName} ${order.customer.lastName}
-📞 โทร: ${order.customer.phone}
-📍 ที่อยู่: ${order.customer.address}
---------------------------
-📦 รายการสินค้า:
-${order.items.map(item => `- ${item.name} (${item.size}) x${item.qty}`).join('\n')}
---------------------------
-💰 ยอดรวมทั้งสิ้น: ฿${order.total.toLocaleString()}
-    `;
-
-    try {
-        // 2. ส่งข้อมูลเข้า Telegram
-        await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-            chat_id: CHAT_ID,
-            text: message,
-            parse_mode: 'Markdown'
-        });
-
-        // 3. ตอบกลับหน้าเว็บว่าสำเร็จ
-        res.status(200).json({
-            success: true,
-            message: "Order received and notification sent!",
-            order_id: order.order_id
-        });
-
-    } catch (error) {
-        console.error('Telegram Error:', error);
-        res.status(500).json({ success: false, error: "Failed to send notification" });
-    }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const crypto = require('crypto'); // เพิ่มตัวนี้เพื่อทำ Hash
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// --- ABA PAYWAY CONFIG (ใส่ข้อมูลที่ได้จากอีเมล) ---
+// --- CONFIGURATION ---
 const ABA_PAYWAY_MERCHANT_ID = 'ec461056';
-const ABA_PAYWAY_API_KEY = '-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCHyo4PGIE/pHgh8uin9A9svRCL
-OvGdgS6nFHV6GY/C/NtmVsclkUvKLEdX0e56Pi0GacVh8JRg+/li2ci/7yhzqkCD
-es/HqGtt+NVIca3bNXQLZV1NxIN3pV9gGhZDxSPmn3foHdx+iJmdIvU6WV7lBFDd
-hhHLFZMVBL+BKHRVnQIDAQAB
------END PUBLIC KEY-----';
 const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/checkout/v2/payment';
+
+// --- [จุดสำคัญ] วาง Private Key ของคุณที่นี่ ---
+// ห้ามให้ใครเห็นรหัสในส่วนนี้เด็ดขาด
+const PRIVATE_KEY = ``-
 
 // --- TELEGRAM CONFIG ---
 const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
 const CHAT_ID = '7299129094';
 
-// ฟังก์ชันสร้าง Hash ตามมาตรฐาน ABA PayWay
-function createAbaHash(values) {
-    const stringToHash = values.join('');
-    return crypto.createHmac('sha512', ABA_PAYWAY_API_KEY)
-                 .update(stringToHash)
-                 .digest('base64');
+/**
+ * ฟังก์ชันสร้าง Signature ด้วย RSA Private Key (SHA512)
+ * แทนที่การใช้ HMAC แบบเดิม
+ */
+function createAbaSignature(values) {
+    const dataToSign = values.join('');
+    try {
+        const sign = crypto.createSign('RSA-SHA512');
+        sign.update(dataToSign);
+        // ผลลัพธ์ต้องส่งกลับเป็น Base64 ตามที่ ABA กำหนด
+        return sign.sign(PRIVATE_KEY, 'base64');
+    } catch (err) {
+        console.error("Signing Error:", err);
+        return null;
+    }
 }
 
 app.post('/create-order', async (req, res) => {
-    const order = req.body;
-    const req_time = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14); // รูปแบบ YYYYMMDDHHmmss
-    const tran_id = order.order_id;
-    const amount = order.total.toFixed(2); // ต้องมีทศนิยม 2 ตำแหน่งตามกฎ ABA
-
-    // 1. เตรียมข้อมูลสำหรับส่งไป ABA
-    const firstName = order.customer.firstName;
-    const lastName = order.customer.lastName;
-    const email = order.customer.email;
-    const phone = order.customer.phone;
-    
-    // เรียงลำดับข้อมูลเพื่อทำ Hash (ห้ามสลับลำดับ!)
-    const hashData = [
-        req_time, 
-        ABA_PAYWAY_MERCHANT_ID, 
-        tran_id, 
-        amount, 
-        '', // items (ถ้าไม่ส่งให้ว่างไว้)
-        '', // shipping
-        firstName, 
-        lastName, 
-        email, 
-        phone, 
-        'purchase', // type
-        '', // payment_option
-        'https://hnungh.github.io/mpjbard/confirm.html', // return_url
-        '', // cancel_url
-        ''  // continue_success_url
-    ];
-
-    const hash = createAbaHash(hashData);
-
-    // 2. ส่งแจ้งเตือนเข้า Telegram (เหมือนเดิม)
-    const message = `🛍️ **ออเดอร์ใหม่ (รอชำระเงิน)**\nID: ${tran_id}\nลูกค้า: ${firstName}\nยอด: ฿${amount}`;
     try {
-        await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-            chat_id: CHAT_ID,
-            text: message,
-            parse_mode: 'Markdown'
-        });
-    } catch (e) { console.log("Telegram Error"); }
+        const order = req.body;
+        const req_time = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+        const tran_id = "NXW-" + Date.now();
+        const amount = parseFloat(order.total).toFixed(2);
 
-    // 3. ส่งข้อมูลทั้งหมดกลับไปที่ Frontend เพื่อให้หน้าเว็บทำการ Redirect ไป ABA
-    res.json({
-        success: true,
-        aba_params: {
-            req_time,
-            merchant_id: ABA_PAYWAY_MERCHANT_ID,
-            tran_id,
-            amount,
-            hash,
-            firstName,
-            lastName,
-            email,
-            phone,
-            type: 'purchase',
-            return_url: hashData[11],
-            api_url: ABA_PAYWAY_URL
-        }
-    });
+        const firstName = order.customer.firstName || '';
+        const lastName = order.customer.lastName || '';
+        const email = order.customer.email || '';
+        const phone = order.customer.phone || '';
+        const return_url = 'https://hnungh.github.io/mpjbard/confirm.html';
+
+        // ลำดับข้อมูล 15 ตัวแปร ตามมาตรฐาน PayWay v2
+        const hashData = [
+            req_time, 
+            ABA_PAYWAY_MERCHANT_ID, 
+            tran_id, 
+            amount, 
+            '', // items (ว่างไว้)
+            '', // shipping (ว่างไว้)
+            firstName, 
+            lastName, 
+            email, 
+            phone, 
+            'purchase', // type
+            '', // payment_option (ว่างไว้)
+            return_url, 
+            '', // cancel_url (ว่างไว้)
+            ''  // continue_success_url (ว่างไว้)
+        ];
+
+        // สร้าง Signature (Digital Signature)
+        const hash = createAbaSignature(hashData);
+
+        if (!hash) throw new Error("Could not generate RSA signature");
+
+        // แจ้งเตือน Telegram
+        const tgMsg = `🛍️ **ออเดอร์ใหม่ (รอชำระ RSA)**\nID: ${tran_id}\nลูกค้า: ${firstName} ${lastName}\nยอด: ฿${amount}`;
+        axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+            chat_id: CHAT_ID, text: tgMsg, parse_mode: 'Markdown'
+        }).catch(e => console.log("Telegram Error"));
+
+        // ส่งข้อมูลกลับไปให้ Frontend
+        res.json({
+            success: true,
+            aba_params: {
+                req_time,
+                merchant_id: ABA_PAYWAY_MERCHANT_ID,
+                tran_id,
+                amount,
+                hash, // ส่งรหัสที่เซ็นด้วย RSA กลับไป
+                firstname: firstName,
+                lastname: lastName,
+                email,
+                phone,
+                type: 'purchase',
+                return_url,
+                api_url: ABA_PAYWAY_URL
+            }
+        });
+
+    } catch (error) {
+        console.error('Backend Process Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+ORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server is running wit
