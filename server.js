@@ -63,12 +63,17 @@ app.use(express.json());
 
 // --- ABA PAYWAY CONFIG (ใส่ข้อมูลที่ได้จากอีเมล) ---
 const ABA_PAYWAY_MERCHANT_ID = 'ec461056';
-const ABA_PAYWAY_API_KEY = '';
+const ABA_PAYWAY_API_KEY = '-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCHyo4PGIE/pHgh8uin9A9svRCL
+OvGdgS6nFHV6GY/C/NtmVsclkUvKLEdX0e56Pi0GacVh8JRg+/li2ci/7yhzqkCD
+es/HqGtt+NVIca3bNXQLZV1NxIN3pV9gGhZDxSPmn3foHdx+iJmdIvU6WV7lBFDd
+hhHLFZMVBL+BKHRVnQIDAQAB
+-----END PUBLIC KEY-----';
 const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/checkout/v2/payment';
 
 // --- TELEGRAM CONFIG ---
-const TELEGRAM_TOKEN = 'TOKEN_เดิมของคุณ';
-const CHAT_ID = 'CHAT_ID_เดิมของคุณ';
+const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
+const CHAT_ID = '';
 
 // ฟังก์ชันสร้าง Hash ตามมาตรฐาน ABA PayWay
 function createAbaHash(values) {
