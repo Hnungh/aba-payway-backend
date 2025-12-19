@@ -11,9 +11,20 @@ app.use(express.json());
 const ABA_PAYWAY_MERCHANT_ID = 'ec461056';
 const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/checkout/v2/payment';
 
-// --- [จุดสำคัญ] วาง Private Key ของคุณที่นี่ ---
-// ห้ามให้ใครเห็นรหัสในส่วนนี้เด็ดขาด
-const PRIVATE_KEY = ``-
+const PRIVATE_KEY = `-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCxG8SNKny1lWln5Yqn4jqVqRnws87ywRcr6Mk9pyWMU2FBQDQQ
+b1uURfS47CAXoBsM6/m+oRZ5TOZd+t4T/6Hu/mqHKAOvV+QlmmUqLFcV6YQ7GMej
+3M4sEZPk+lL5gEDeTVQG2iG60T9lXghPKSLAMMAA1FrPp4iY1yOmjNYB1wIDAQAB
+AoGAFa+8QBA2nWInuitJxf02G5L4FFi4G6fYJ1jFojEq2wVvWww6Xn7Rkb+FKUrvMmVjmo/0kJ/sqWVorz5OM4MG+BFkZ9R3Yqstxg61SHUyC4HvseevYbfMGWQvitwF
+fVSFBvKw2jpHYP1lILvcwDg9XC+v+HsR80vtDX8p66fnQjUCQQDf51vXSVIlUANh
+GGU8QPR5crW7Bb1OARM5ccB0wLrP+oKpl2rDHFa1B/x9rMxCx7MdrdulMbM4yqNb
+qraA1SONAkEAyn8nObhzdQOm5osPsBUWXQh1+PfAp1wwK7XxmbdbEygNlj+/IQNn
+lYFpFuHNGg8tTbicHBi9Ts2mvmn3RzAP8wJAaTriBhd2nQSy4eJGSgA5Jg8MbB5x
+bwTAVUIp8nVWF0MkP7JjQdnCwohDWYlp4oTaoLtCPKxUD//ksMNVzMzfTQJACCBO
+LKzQRVPeMMZH3OMbwKQER/d5Tb4PWNG2XlrTVtN2qB7qxqJiV8eXtgldt7wAL2xH
+J4F+p1jtZhrOh5bQLQJBALA182ePiF4+UlT5D5WEZpas4GyXumguivVGMjIoFt18
+xOofBdCJU8fLaoEX248WRN/0WOZdomZeF91+CHC/ARM=
+-----END RSA PRIVATE KEY-----`;
 
 // --- TELEGRAM CONFIG ---
 const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
