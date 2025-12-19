@@ -73,7 +73,7 @@ const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/checkout/v2/p
 
 // --- TELEGRAM CONFIG ---
 const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
-const CHAT_ID = '';
+const CHAT_ID = '7299129094';
 
 // ฟังก์ชันสร้าง Hash ตามมาตรฐาน ABA PayWay
 function createAbaHash(values) {
@@ -109,7 +109,7 @@ app.post('/create-order', async (req, res) => {
         phone, 
         'purchase', // type
         '', // payment_option
-        'https://your-website.com/confirm.html', // return_url
+        'https://hnungh.github.io/mpjbard/confirm.html', // return_url
         '', // cancel_url
         ''  // continue_success_url
     ];
