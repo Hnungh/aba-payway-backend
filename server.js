@@ -9,7 +9,7 @@ app.use(express.json());
 
 // --- CONFIGURATION ---
 const ABA_PAYWAY_MERCHANT_ID = 'ec461056';
-const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/checkout/v2/payment';
+const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/purchase';
 
 const PRIVATE_KEY = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQCxG8SNKny1lWln5Yqn4jqVqRnws87ywRcr6Mk9pyWMU2FBQDQQ
