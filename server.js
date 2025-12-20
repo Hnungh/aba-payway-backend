@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const crypto = require('crypto'); // หัวใจสำคัญสำหรับ RSA
+const crypto = require('crypto');
 const app = express();
 
 app.use(cors({ origin: '*' }));
@@ -11,11 +11,13 @@ app.use(express.json());
 const ABA_PAYWAY_MERCHANT_ID = 'ec461056';
 const ABA_PAYWAY_URL = 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/purchase';
 
+// วาง Private Key ของคุณให้ครอบคลุมตั้งแต่ BEGIN ถึง END
 const PRIVATE_KEY = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQCxG8SNKny1lWln5Yqn4jqVqRnws87ywRcr6Mk9pyWMU2FBQDQQ
 b1uURfS47CAXoBsM6/m+oRZ5TOZd+t4T/6Hu/mqHKAOvV+QlmmUqLFcV6YQ7GMej
 3M4sEZPk+lL5gEDeTVQG2iG60T9lXghPKSLAMMAA1FrPp4iY1yOmjNYB1wIDAQAB
-AoGAFa+8QBA2nWInuitJxf02G5L4FFi4G6fYJ1jFojEq2wVvWww6Xn7Rkb+FKUrvMmVjmo/0kJ/sqWVorz5OM4MG+BFkZ9R3Yqstxg61SHUyC4HvseevYbfMGWQvitwF
+AoGAFa+8QBA2nWInuitJxf02G5L4FFi4G6fYJ1jFojEq2wVvWww6Xn7Rkb+FKUrv
+MmVjmo/0kJ/sqWVorz5OM4MG+BFkZ9R3Yqstxg61SHUyC4HvseevYbfMGWQvitwF
 fVSFBvKw2jpHYP1lILvcwDg9XC+v+HsR80vtDX8p66fnQjUCQQDf51vXSVIlUANh
 GGU8QPR5crW7Bb1OARM5ccB0wLrP+oKpl2rDHFa1B/x9rMxCx7MdrdulMbM4yqNb
 qraA1SONAkEAyn8nObhzdQOm5osPsBUWXQh1+PfAp1wwK7XxmbdbEygNlj+/IQNn
@@ -26,20 +28,14 @@ J4F+p1jtZhrOh5bQLQJBALA182ePiF4+UlT5D5WEZpas4GyXumguivVGMjIoFt18
 xOofBdCJU8fLaoEX248WRN/0WOZdomZeF91+CHC/ARM=
 -----END RSA PRIVATE KEY-----`;
 
-// --- TELEGRAM CONFIG ---
 const TELEGRAM_TOKEN = '7577129821:AAF-ZEZJakHhPaejHVKphfoSmBXQ2cK0qH0';
 const CHAT_ID = '7299129094';
 
-/**
- * ฟังก์ชันสร้าง Signature ด้วย RSA Private Key (SHA512)
- * แทนที่การใช้ HMAC แบบเดิม
- */
 function createAbaSignature(values) {
     const dataToSign = values.join('');
     try {
         const sign = crypto.createSign('RSA-SHA512');
         sign.update(dataToSign);
-        // ผลลัพธ์ต้องส่งกลับเป็น Base64 ตามที่ ABA กำหนด
         return sign.sign(PRIVATE_KEY, 'base64');
     } catch (err) {
         console.error("Signing Error:", err);
@@ -59,38 +55,44 @@ app.post('/create-order', async (req, res) => {
         const email = order.customer.email || '';
         const phone = order.customer.phone || '';
         const return_url = 'https://hnungh.github.io/mpjbard/confirm.html';
+        
+        // ตัวแปรเสริมที่ต้องใช้ทั้งใน Hash และการส่งค่า
+        const items = '';
+        const shipping = '';
+        const payment_option = '';
+        const cancel_url = '';
+        const continue_success_url = '';
 
-        // ลำดับข้อมูล 15 ตัวแปร ตามมาตรฐาน PayWay v2
+        // ลำดับข้อมูล 15 ตัวแปร (ห้ามสลับ!)
         const hashData = [
             req_time, 
             ABA_PAYWAY_MERCHANT_ID, 
             tran_id, 
             amount, 
-            '', // items (ว่างไว้)
-            '', // shipping (ว่างไว้)
+            items,
+            shipping,
             firstName, 
             lastName, 
             email, 
             phone, 
-            'purchase', // type
-            '', // payment_option (ว่างไว้)
+            'purchase', 
+            payment_option, 
             return_url, 
-            '', // cancel_url (ว่างไว้)
-            ''  // continue_success_url (ว่างไว้)
+            cancel_url, 
+            continue_success_url
         ];
 
-        // สร้าง Signature (Digital Signature)
         const hash = createAbaSignature(hashData);
 
-        if (!hash) throw new Error("Could not generate RSA signature");
+        if (!hash) throw new Error("Signature generation failed");
 
         // แจ้งเตือน Telegram
-        const tgMsg = `🛍️ **ออเดอร์ใหม่ (รอชำระ RSA)**\nID: ${tran_id}\nลูกค้า: ${firstName} ${lastName}\nยอด: ฿${amount}`;
+        const tgMsg = `🛍️ **NEW ORDER**\nID: ${tran_id}\nCustomer: ${firstName}\nTotal: ฿${amount}`;
         axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
             chat_id: CHAT_ID, text: tgMsg, parse_mode: 'Markdown'
-        }).catch(e => console.log("Telegram Error"));
+        }).catch(() => {});
 
-        // ส่งข้อมูลกลับไปให้ Frontend
+        // ตอบกลับ Frontend พร้อมตัวแปรครบ 15 ตัวตามลำดับ Hash
         res.json({
             success: true,
             aba_params: {
@@ -98,22 +100,27 @@ app.post('/create-order', async (req, res) => {
                 merchant_id: ABA_PAYWAY_MERCHANT_ID,
                 tran_id,
                 amount,
-                hash, // ส่งรหัสที่เซ็นด้วย RSA กลับไป
-                firstname: firstName,
+                hash,
+                firstname: firstName, 
                 lastname: lastName,
                 email,
                 phone,
+                items,
+                shipping,
                 type: 'purchase',
+                payment_option,
                 return_url,
+                cancel_url,
+                continue_success_url,
                 api_url: ABA_PAYWAY_URL
             }
         });
 
     } catch (error) {
-        console.error('Backend Process Error:', error);
+        console.error('Backend Error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server is running with RSA Signer on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
